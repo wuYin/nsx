@@ -1,10 +1,11 @@
-package velar
+package service
 
 import (
 	"fmt"
 	"reflect"
 	"testing"
 	"time"
+	"velar"
 )
 
 type AddService interface {
@@ -33,7 +34,7 @@ func TestCallAdd(t *testing.T) {
 	}
 
 	manager := NewServiceManager([]Service{addService})
-	p := CallReq{
+	p := velar.CallReq{
 		ServiceUri: "add-service",
 		Method:     "Add",
 		Args:       []interface{}{1, 1},
@@ -54,7 +55,7 @@ func TestCallAddAll(t *testing.T) {
 		Interface: reflect.TypeOf((*AddService)(nil)).Elem(),
 	}
 	manager := NewServiceManager([]Service{addService})
-	p := CallReq{
+	p := velar.CallReq{
 		ServiceUri: "add-service",
 		Method:     "AddAll",
 		Args:       []interface{}{1, []int{10, 20}},

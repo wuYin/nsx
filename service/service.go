@@ -1,10 +1,11 @@
-package velar
+package service
 
 import (
 	"fmt"
 	"logx"
 	"reflect"
 	"time"
+	"velar"
 )
 
 type Service struct {
@@ -65,7 +66,7 @@ func NewServiceManager(services []Service) *ServiceManager {
 }
 
 // 执行调用
-func (m *ServiceManager) Call(req CallReq) (resp CallResp) {
+func (m *ServiceManager) Call(req velar.CallReq) (resp velar.CallResp) {
 	// 检查服务
 	service, ok := m.services[req.ServiceUri]
 	if !ok {
