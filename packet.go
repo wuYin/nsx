@@ -2,14 +2,14 @@ package velar
 
 import "time"
 
-type ReqPacket struct {
+type CallReq struct {
 	ServiceUri string        `json:"uri"`
 	Method     string        `json:"method"`
 	Args       []interface{} `json:"args"`
 	Timeout    time.Duration `json:"-"`
 }
 
-type RespPacket struct {
+type CallResp struct {
 	Ec  int         `json:"ec"`
 	Em  string      `json:"em"`
 	Res interface{} `json:"res"`

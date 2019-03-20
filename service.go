@@ -65,32 +65,32 @@ func NewServiceManager(services []Service) *ServiceManager {
 }
 
 // 执行调用
-func (m *ServiceManager) Call(p ReqPacket) (resp RespPacket) {
+func (m *ServiceManager) Call(req CallReq) (resp CallResp) {
 	// 检查服务
-	service, ok := m.services[p.ServiceUri]
+	service, ok := m.services[req.ServiceUri]
 	if !ok {
-		resp.Em = fmt.Sprintf("call: %s not registed", p.ServiceUri)
+		resp.Em = fmt.Sprintf("call: %s not registed", req.ServiceUri)
 		return
 	}
 
 	// 检查调用方法
-	method, ok := service.methods[p.Method]
+	method, ok := service.methods[req.Method]
 	if !ok {
 		resp.Ec = 2
 		return
 	}
 
 	// 检查参数个数
-	if len(p.Args) != len(method.ArgTypes) {
+	if len(req.Args) != len(method.ArgTypes) {
 		resp.Ec = 3
-		resp.Em = fmt.Sprintf("args are %d, should be %d", len(p.Args), len(method.ArgTypes))
+		resp.Em = fmt.Sprintf("args are %d, should be %d", len(req.Args), len(method.ArgTypes))
 		return
 	}
 
 	// 值转换
-	refVals := make([]reflect.Value, 0, len(p.Args))
+	refVals := make([]reflect.Value, 0, len(req.Args))
 	for i := range method.ArgTypes {
-		v := reflect.ValueOf(p.Args[i])
+		v := reflect.ValueOf(req.Args[i])
 		refVals = append(refVals, v)
 	}
 
@@ -107,7 +107,7 @@ func (m *ServiceManager) Call(p ReqPacket) (resp RespPacket) {
 
 	// 等待执行完毕
 	select {
-	case <-time.After(p.Timeout):
+	case <-time.After(req.Timeout):
 		resp.Ec = 4
 	case res := <-resCh:
 		if res == nil {
