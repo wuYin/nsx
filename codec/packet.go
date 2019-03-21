@@ -1,4 +1,4 @@
-package velar
+package codec
 
 import "time"
 

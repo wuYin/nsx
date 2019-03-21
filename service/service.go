@@ -5,7 +5,7 @@ import (
 	"logx"
 	"reflect"
 	"time"
-	"velar"
+	"velar/codec"
 )
 
 type Service struct {
@@ -66,7 +66,7 @@ func NewServiceManager(services []Service) *ServiceManager {
 }
 
 // 执行调用
-func (m *ServiceManager) Call(req velar.CallReq) (resp velar.CallResp) {
+func (m *ServiceManager) Call(req codec.CallReq) (resp codec.CallResp) {
 	// 检查服务
 	service, ok := m.services[req.ServiceUri]
 	if !ok {
