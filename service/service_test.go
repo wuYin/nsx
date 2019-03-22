@@ -2,24 +2,24 @@ package service
 
 import (
 	"fmt"
+	"nix/codec"
 	"reflect"
 	"testing"
 	"time"
-	"velar/codec"
 )
 
-type AddService interface {
+type AddServiceInterface interface {
 	Add(n, diff int) int
 	AddAll(base int, diffs []int) int
 }
 
-type AddServiceProxy struct{}
+type AddService struct{}
 
-func (s AddServiceProxy) Add(n, diff int) int {
+func (s AddService) Add(n, diff int) int {
 	return n + diff
 }
 
-func (s AddServiceProxy) AddAll(base int, diffs []int) int {
+func (s AddService) AddAll(base int, diffs []int) int {
 	for _, d := range diffs {
 		base += d
 	}
@@ -29,8 +29,8 @@ func (s AddServiceProxy) AddAll(base int, diffs []int) int {
 func TestCallAdd(t *testing.T) {
 	addService := Service{
 		Uri:       "add-service",
-		Proxy:     AddServiceProxy{},
-		Interface: reflect.TypeOf((*AddService)(nil)).Elem(),
+		Instance:  AddService{},
+		Interface: reflect.TypeOf((*AddServiceInterface)(nil)).Elem(),
 	}
 
 	manager := NewServiceManager([]Service{addService})
@@ -51,8 +51,8 @@ func TestCallAdd(t *testing.T) {
 func TestCallAddAll(t *testing.T) {
 	addService := Service{
 		Uri:       "add-service",
-		Proxy:     &AddServiceProxy{},
-		Interface: reflect.TypeOf((*AddService)(nil)).Elem(),
+		Instance:  &AddService{},
+		Interface: reflect.TypeOf((*AddServiceInterface)(nil)).Elem(),
 	}
 	manager := NewServiceManager([]Service{addService})
 	p := codec.CallReq{
@@ -63,5 +63,5 @@ func TestCallAddAll(t *testing.T) {
 	}
 
 	resp := manager.Call(p)
-	fmt.Printf("%+v\n", resp)
+	fmt.Printf("call resp: %+v\n", resp)
 }

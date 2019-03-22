@@ -2,15 +2,24 @@ package service
 
 import (
 	"fmt"
-	"logx"
+	"nix/codec"
 	"reflect"
 	"time"
-	"velar/codec"
+)
+
+const (
+	// 管理注册中心的 admin 服务
+	SERVICE_ADMIN = "admin-service"
+
+	// 方法名
+	METHOD_REGISTER    = "RegisterService"
+	METHOD_UNREGISTER  = "UnRegisterService"
+	METHOD_GET_SERVICE = "GetService"
 )
 
 type Service struct {
 	Uri       string            // 服务名称
-	Proxy     interface{}       // 已实现对外接口的代理实例
+	Instance  interface{}       // 已实现对外接口的实例
 	methods   map[string]Method // 对外可调用的方法列表
 	Interface reflect.Type      // 接口定义
 }
@@ -23,28 +32,28 @@ type Method struct {
 }
 
 type ServiceManager struct {
-	services map[string]Service
+	uri2Service map[string]Service
 }
 
 func NewServiceManager(services []Service) *ServiceManager {
-	manager := &ServiceManager{services: make(map[string]Service)}
+	manager := &ServiceManager{uri2Service: make(map[string]Service)}
 
 	for _, s := range services {
-		pv := reflect.ValueOf(s.Proxy)
-		pt := reflect.TypeOf(s.Proxy)
+		iv := reflect.ValueOf(s.Instance)
+		it := reflect.TypeOf(s.Instance)
 		// Implements 判断会区分 receiver 是指针还是值，调用时需统一
-		if ok := pt.Implements(s.Interface); !ok {
+		if ok := it.Implements(s.Interface); !ok {
 			msg := fmt.Sprintf("%s not implement interface", s.Uri)
 			panic(msg)
 		}
 
 		methods := make(map[string]Method)
-		for i := 0; i < pt.NumMethod(); i++ {
+		for i := 0; i < it.NumMethod(); i++ {
 			// 这里比较坑啊，普通类型的 Method() 和直接对该方法进行 reflect.Type()，取出来的类型是不一致的，前者第一个入参是结构类型
 			// 前者是方法变量，后者是方法。值得区分
 			m := s.Interface.Method(i)
 			mt := m.Type
-			method := Method{Name: m.Name, Value: pv.MethodByName(m.Name)}
+			method := Method{Name: m.Name, Value: iv.MethodByName(m.Name)}
 			// 返回参数约定只有一个，比如 error
 			if mt.NumOut() != 1 {
 				msg := fmt.Sprintf("panic: %s %s has %d replies args", s.Uri, mt.Name(), mt.NumOut())
@@ -59,7 +68,7 @@ func NewServiceManager(services []Service) *ServiceManager {
 			methods[method.Name] = method
 		}
 		s.methods = methods
-		manager.services[s.Uri] = s
+		manager.uri2Service[s.Uri] = s
 	}
 
 	return manager
@@ -68,8 +77,9 @@ func NewServiceManager(services []Service) *ServiceManager {
 // 执行调用
 func (m *ServiceManager) Call(req codec.CallReq) (resp codec.CallResp) {
 	// 检查服务
-	service, ok := m.services[req.ServiceUri]
+	service, ok := m.uri2Service[req.ServiceUri]
 	if !ok {
+		resp.Ec = 1
 		resp.Em = fmt.Sprintf("call: %s not registed", req.ServiceUri)
 		return
 	}
@@ -78,31 +88,33 @@ func (m *ServiceManager) Call(req codec.CallReq) (resp codec.CallResp) {
 	method, ok := service.methods[req.Method]
 	if !ok {
 		resp.Ec = 2
+		resp.Em = fmt.Sprintf("call: %s method %s not found", req.ServiceUri, req.Method)
 		return
 	}
 
 	// 检查参数个数
 	if len(req.Args) != len(method.ArgTypes) {
 		resp.Ec = 3
-		resp.Em = fmt.Sprintf("args are %d, should be %d", len(req.Args), len(method.ArgTypes))
+		resp.Em = fmt.Sprintf("call: %s %s args not match: %v", req.ServiceUri, req.Method, req.Args)
 		return
 	}
 
 	// 值转换
-	refVals := make([]reflect.Value, 0, len(req.Args))
+	in := make([]reflect.Value, 0, len(req.Args))
 	for i := range method.ArgTypes {
 		v := reflect.ValueOf(req.Args[i])
-		refVals = append(refVals, v)
+		in = append(in, v)
 	}
+
 
 	resCh := make(chan []reflect.Value, 1)
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
-				logx.Error(err)
+				fmt.Println("call fatal:", err)
 				resCh <- nil
 			}
-			resCh <- method.Value.Call(refVals)
+			resCh <- method.Value.Call(in)
 		}()
 	}()
 
