@@ -14,12 +14,14 @@ type CallReq struct {
 }
 
 type CallResp struct {
+	Seq int32       `json:"seq"`
 	Ec  int         `json:"ec"`
 	Em  string      `json:"em"`
 	Res interface{} `json:"res"`
 }
 
 type CmdReq struct {
+	Seq        int32         `json:"seq"`
 	ServiceUri string        `json:"uri"`
 	Method     string        `json:"method"`
 	Args       []interface{} `json:"args"`
@@ -39,9 +41,8 @@ func CmdReq2CallReq(rawData []byte) (*CallReq, error) {
 	return call, nil
 }
 
-func CallResp2Packet(resp CallResp, reqPack *tron.Packet) *tron.Packet {
-	data, _ := json.Marshal(resp)
-	respPack := tron.NewPacket(data)
-	respPack.Header.Seq = reqPack.Header.Seq
+func CallResp2Packet(callResp CallResp, reqPack *tron.Packet) *tron.Packet {
+	data, _ := json.Marshal(callResp)
+	respPack := tron.NewRespPacket(reqPack.Seq(), data)
 	return respPack
 }

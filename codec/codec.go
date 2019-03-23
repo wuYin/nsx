@@ -3,6 +3,7 @@ package codec
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strconv"
@@ -64,8 +65,12 @@ func (c *ServerCodec) ReadPacket(r *bufio.Reader) ([]byte, error) {
 }
 
 // 将 Read 读取到的数据直接封装成 packet
-func (c *ServerCodec) UnmarshalPacket(buf []byte) (*tron.Packet, error) {
-	return tron.NewPacket(buf), nil
+func (c *ServerCodec) UnmarshalPacket(reqBuf []byte) (*tron.Packet, error) {
+	var cmdReq CmdReq
+	if err := json.Unmarshal(reqBuf, &cmdReq); err != nil {
+		panic(err)
+	}
+	return tron.NewRespPacket(cmdReq.Seq, reqBuf), nil
 }
 
 // 序列化

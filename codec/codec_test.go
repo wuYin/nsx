@@ -48,7 +48,7 @@ func TestPacket(t *testing.T) {
 			}
 			fmt.Printf("[read packet]: %s\n", string(b))
 
-			respPack := tron.NewPacket([]byte("A"))
+			respPack := tron.NewRespPacket(0, []byte("A"))
 			b = codec.MarshalPacket(*respPack)
 
 			fmt.Printf("[resp packet]: `%s`\n", b)

@@ -39,19 +39,18 @@ func (s NixServer) packetHandler(worker *tron.Client, p *tron.Packet) {
 	}
 	callReq.Timeout = 5 * time.Second
 
-	// fmt.Printf("callReq: %+v\n", callReq)
 	// 执行调用
 	resp := s.manager.Call(*callReq)
 	if resp.Ec != 0 {
 		fmt.Printf("invalid call: req: %+v, resp: %+v\n", callReq, resp)
 	}
-	// fmt.Printf("callResp: %+v\n", resp)
+	resp.Seq = p.Seq()
 
 	// 包装响应
 	respPack := codec.CallResp2Packet(resp, p)
 
 	// 写回给调用方
-	if _, err = worker.DirectWrite(respPack); err != nil {
+	if _, err = worker.AsyncWrite(respPack); err != nil {
 		fmt.Println("write to worker failed: ", err)
 	}
 }
