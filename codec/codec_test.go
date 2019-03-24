@@ -27,8 +27,7 @@ func TestPacket(t *testing.T) {
 				fmt.Println(err)
 				continue
 			}
-			buf := make([]byte, 1024)
-			n, err := conn.Read(buf)
+			packData, err := codec.ReadPacket(bufio.NewReader(conn))
 			if err != nil {
 				fmt.Println(err)
 				continue
@@ -36,7 +35,7 @@ func TestPacket(t *testing.T) {
 			// cmd := string(buf[:n])
 			// fmt.Printf("[cmd]: `%s`\n", cmd)
 
-			pack, err := codec.UnmarshalPacket(buf[:n])
+			pack, err := codec.UnmarshalPacket(packData)
 			if err != nil {
 				fmt.Println(err)
 			}
@@ -53,8 +52,7 @@ func TestPacket(t *testing.T) {
 
 			fmt.Printf("[resp packet]: `%s`\n", b)
 
-			n, err = conn.Write(b)
-			fmt.Println(n, err)
+			fmt.Println(conn.Write(b))
 		}
 	}()
 
@@ -70,7 +68,11 @@ func TestPacket(t *testing.T) {
 			Method:     "Add",
 			Args:       []interface{}{1, 2},
 		}
-		b, _ := json.Marshal(cmd)
+		b, err := json.Marshal(cmd)
+		if err != nil {
+			fmt.Println("unmarshal failed: ", err.Error())
+			return
+		}
 		res, err := cli.Get(string(b)).Result()
 		if err != nil {
 			fmt.Println("get failed: ", err)

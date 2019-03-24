@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"nix/codec"
 	"reflect"
@@ -99,14 +100,14 @@ func (m *ServiceManager) Call(req codec.CallReq) (resp codec.CallResp) {
 		return
 	}
 
-	// 值转换
+	// 取出指定类型的参数，反序列化后直接赋值
 	in := make([]reflect.Value, 0, len(req.Args))
 	for i, argType := range method.ArgTypes {
-		v := reflect.ValueOf(req.Args[i])
-		if !v.Type().ConvertibleTo(argType) {
-			panic(fmt.Sprintf("can't convert %+v to %+v", v.Type(), argType))
+		zeroVPtr := reflect.New(argType)
+		if err := json.Unmarshal(req.Args[i], zeroVPtr.Interface()); err != nil {
+			panic("call: unmarshal: failed" + err.Error())
 		}
-		in = append(in, v.Convert(argType))
+		in = append(in, zeroVPtr.Elem())
 	}
 
 	resCh := make(chan []reflect.Value, 1)
@@ -129,7 +130,8 @@ func (m *ServiceManager) Call(req codec.CallReq) (resp codec.CallResp) {
 			resp.Ec = 5
 			return
 		}
-		resp.Res = res[0].Interface()
+		buf, _ := json.Marshal(res[0].Interface())
+		resp.Res = buf
 	}
 
 	return resp

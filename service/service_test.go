@@ -63,5 +63,5 @@ func TestCallAddAll(t *testing.T) {
 	}
 
 	resp := manager.Call(p)
-	fmt.Printf("call resp: %+v\n", resp)
+	fmt.Println(p.Method, p.Args, resp.Res)
 }
