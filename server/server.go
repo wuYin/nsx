@@ -16,7 +16,7 @@ type NixServer struct {
 }
 
 func NewNixServer(addr string, services []service.Service) *NixServer {
-	conf := tron.NewConfig(16*1024, 16*1024, 100, 100, 1000, 5*time.Second)
+	conf := tron.NewDefaultConf(1 * time.Minute)
 	s := &NixServer{}
 	s.manager = service.NewServiceManager(services)
 	s.server = tron.NewServer(addr, conf, codec.NewServerCodec(), s.packetHandler)

@@ -101,11 +101,13 @@ func (m *ServiceManager) Call(req codec.CallReq) (resp codec.CallResp) {
 
 	// 值转换
 	in := make([]reflect.Value, 0, len(req.Args))
-	for i := range method.ArgTypes {
+	for i, argType := range method.ArgTypes {
 		v := reflect.ValueOf(req.Args[i])
-		in = append(in, v)
+		if !v.Type().ConvertibleTo(argType) {
+			panic(fmt.Sprintf("can't convert %+v to %+v", v.Type(), argType))
+		}
+		in = append(in, v.Convert(argType))
 	}
-
 
 	resCh := make(chan []reflect.Value, 1)
 	go func() {
