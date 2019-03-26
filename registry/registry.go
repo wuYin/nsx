@@ -1,7 +1,7 @@
 package registry
 
 import (
-	"nix/service"
+	"nsx/service"
 )
 
 type Registry interface {

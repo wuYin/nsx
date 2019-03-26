@@ -3,21 +3,21 @@ package server
 import (
 	"fmt"
 	"log"
-	"nix/codec"
-	"nix/registry"
-	"nix/service"
+	"nsx/codec"
+	"nsx/registry"
+	"nsx/service"
 	"time"
 	"tron"
 )
 
-type NixServer struct {
+type NsxServer struct {
 	server  *tron.Server
 	manager *service.ServiceManager
 }
 
-func NewNixServer(addr string, services []service.Service) *NixServer {
+func NewNsxServer(addr string, services []service.Service) *NsxServer {
 	conf := tron.NewDefaultConf(1 * time.Minute)
-	s := &NixServer{}
+	s := &NsxServer{}
 	s.manager = service.NewServiceManager(services)
 	s.server = tron.NewServer(addr, conf, codec.NewServerCodec(), s.packetHandler)
 
@@ -32,7 +32,7 @@ func NewNixServer(addr string, services []service.Service) *NixServer {
 }
 
 // 执行本地调用
-func (s NixServer) packetHandler(worker *tron.Client, p *tron.Packet) {
+func (s NsxServer) packetHandler(worker *tron.Client, p *tron.Packet) {
 	callReq, err := codec.CmdReq2CallReq(p.Data)
 	if err != nil {
 		fmt.Println("packetHandler", err)

@@ -2,8 +2,8 @@ package server
 
 import (
 	"fmt"
-	"nix/registry"
-	"nix/service"
+	"nsx/registry"
+	"nsx/service"
 	"reflect"
 	"testing"
 )
@@ -20,7 +20,7 @@ func TestServer(t *testing.T) {
 		},
 	}
 
-	NewNixServer("localhost:8080", services)
+	NewNsxServer("localhost:8080", services)
 	fmt.Println(rs.service2Addr) // map[registry-service:localhost:8080]
 }
 

@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"gopkg.in/redis.v3"
-	"nix/codec"
-	"nix/service"
+	"nsx/codec"
+	"nsx/service"
 )
 
 type DefaultRegistry struct {
