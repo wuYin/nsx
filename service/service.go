@@ -13,8 +13,8 @@ const (
 	SERVICE_ADMIN = "admin-service"
 
 	// 方法名
-	METHOD_REGISTER    = "RegisterService"
-	METHOD_UNREGISTER  = "UnRegisterService"
+	METHOD_REGISTER    = "Register"
+	METHOD_UNREGISTER  = "UnRegister"
 	METHOD_GET_SERVICE = "GetService"
 )
 
@@ -26,10 +26,10 @@ type Service struct {
 }
 
 type Method struct {
-	Name      string
-	Value     reflect.Value
-	ArgTypes  []reflect.Type // 入参
-	ReplyType reflect.Type   // 出参
+	Name     string
+	Value    reflect.Value
+	inTypes  []reflect.Type // 入参
+	outTypes []reflect.Type // 出参
 }
 
 type ServiceManager struct {
@@ -55,16 +55,11 @@ func NewServiceManager(services []Service) *ServiceManager {
 			m := s.Interface.Method(i)
 			mt := m.Type
 			method := Method{Name: m.Name, Value: iv.MethodByName(m.Name)}
-			// 返回参数约定只有一个，比如 error
-			if mt.NumOut() != 1 {
-				msg := fmt.Sprintf("panic: %s %s has %d replies args", s.Uri, mt.Name(), mt.NumOut())
-				panic(msg)
+			for i := 0; i < mt.NumOut(); i++ {
+				method.outTypes = append(method.outTypes, mt.Out(i)) // 可加入参数约定
 			}
-			method.ReplyType = mt.Out(0)
-
-			// 输入参数可多个
 			for i := 0; i < mt.NumIn(); i++ {
-				method.ArgTypes = append(method.ArgTypes, mt.In(i))
+				method.inTypes = append(method.inTypes, mt.In(i))
 			}
 			methods[method.Name] = method
 		}
@@ -94,16 +89,16 @@ func (m *ServiceManager) Call(req codec.CallReq) (resp codec.CallResp) {
 	}
 
 	// 检查参数个数
-	if len(req.Args) != len(method.ArgTypes) {
+	if len(req.Args) != len(method.inTypes) {
 		resp.Ec = 3
-		resp.Em = fmt.Sprintf("call: %s %s args not match: %v", req.ServiceUri, req.Method, req.Args)
+		resp.Em = fmt.Sprintf("call: %s %s args not match: %q", req.ServiceUri, req.Method, req.Args)
 		return
 	}
 
 	// 取出指定类型的参数，反序列化后直接赋值
 	in := make([]reflect.Value, 0, len(req.Args))
-	for i, argType := range method.ArgTypes {
-		zeroVPtr := reflect.New(argType)
+	for i, inType := range method.inTypes {
+		zeroVPtr := reflect.New(inType)
 		if err := json.Unmarshal(req.Args[i], zeroVPtr.Interface()); err != nil {
 			panic("call: unmarshal: failed" + err.Error())
 		}

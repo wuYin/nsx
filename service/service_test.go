@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"nsx/codec"
 	"reflect"
@@ -33,11 +34,12 @@ func TestCallAdd(t *testing.T) {
 		Interface: reflect.TypeOf((*AddServiceInterface)(nil)).Elem(),
 	}
 
+	buf, _ := json.Marshal(1)
 	manager := NewServiceManager([]Service{addService})
 	p := codec.CallReq{
 		ServiceUri: "add-service",
 		Method:     "Add",
-		Args:       []interface{}{1, 1},
+		Args:       []json.RawMessage{buf, buf},
 		Timeout:    2 * time.Second,
 	}
 	resp := manager.Call(p)
@@ -45,7 +47,7 @@ func TestCallAdd(t *testing.T) {
 		t.Fatalf("call failed, ec: %d, em: %s", resp.Ec, resp.Em)
 	}
 
-	fmt.Println(p.Method, p.Args, resp.Res) // Add [1 1] 2  // bingo 调用成功
+	fmt.Printf("%s %q %q", p.Method, p.Args, resp.Res) // Add [1 1] 2  // bingo 调用成功
 }
 
 func TestCallAddAll(t *testing.T) {
@@ -55,13 +57,16 @@ func TestCallAddAll(t *testing.T) {
 		Interface: reflect.TypeOf((*AddServiceInterface)(nil)).Elem(),
 	}
 	manager := NewServiceManager([]Service{addService})
+	buf1, _ := json.Marshal(1)
+	buf2, _ := json.Marshal([]int{10, 20})
+
 	p := codec.CallReq{
 		ServiceUri: "add-service",
 		Method:     "AddAll",
-		Args:       []interface{}{1, []int{10, 20}},
+		Args:       []json.RawMessage{buf1, buf2},
 		Timeout:    2 * time.Second,
 	}
 
 	resp := manager.Call(p)
-	fmt.Println(p.Method, p.Args, resp.Res)
+	fmt.Printf("%s %q %q", p.Method, p.Args, resp.Res)
 }

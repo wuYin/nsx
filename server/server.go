@@ -15,18 +15,27 @@ type NsxServer struct {
 	manager *service.ServiceManager
 }
 
-func NewNsxServer(addr string, services []service.Service) *NsxServer {
+func NewNsxServer(serverAddr string, regServers []string, services []service.Service, regType int) *NsxServer {
 	conf := tron.NewDefaultConf(1 * time.Minute)
 	s := &NsxServer{}
 	s.manager = service.NewServiceManager(services)
-	s.server = tron.NewServer(addr, conf, codec.NewServerCodec(), s.packetHandler)
+	s.server = tron.NewServer(serverAddr, conf, codec.NewServerCodec(), s.packetHandler)
 
 	if err := s.server.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
 
-	center := registry.NewRegistryCenter(addr, services) //
-	center.RegisterAllService()                          // 注册所有服务
+	var regCenter *registry.RegistryCenter
+	switch regType {
+	case registry.REG_DEFAULT:
+		regCenter = registry.NewDefaultRegistryCenter(serverAddr, regServers[0], services)
+	case registry.REG_ZK:
+		regCenter = registry.NewZKRegistryCenter(serverAddr, regServers, services) // 单机测
+	default:
+		s.server.Shutdown()
+		panic(fmt.Sprintf("invalid registry type: %d", regType))
+	}
+	regCenter.RegisterAllService() // 注册所有服务
 
 	return s
 }
@@ -42,7 +51,7 @@ func (s NsxServer) packetHandler(worker *tron.Client, p *tron.Packet) {
 	// 执行调用
 	resp := s.manager.Call(*callReq)
 	if resp.Ec != 0 {
-		fmt.Printf("invalid call: req: %+v, resp: %+v\n", callReq, resp)
+		fmt.Printf("invalid call: req: %q, resp: %+v\n", callReq, resp)
 	}
 	resp.Seq = p.Seq()
 

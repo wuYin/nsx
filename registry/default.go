@@ -2,12 +2,14 @@ package registry
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"gopkg.in/redis.v3"
 	"nsx/codec"
 	"nsx/service"
 )
 
+// 默认的单机注册中心
 type DefaultRegistry struct {
 	addr   string
 	regCli *redis.Client
@@ -23,12 +25,13 @@ func NewDefaultRegistry(addr string) *DefaultRegistry {
 }
 
 // 向 admin-service 发起注册请求
-func (r DefaultRegistry) RegisterService(newServiceUri string) error {
+func (r DefaultRegistry) Register(newServiceUri, addr string) error {
 	cmd := codec.CmdReq{
 		ServiceUri: service.SERVICE_ADMIN,
 		Method:     service.METHOD_REGISTER,
 		Args: []interface{}{
 			newServiceUri,
+			addr,
 		},
 	}
 	_, err := r.request(cmd)
@@ -36,18 +39,18 @@ func (r DefaultRegistry) RegisterService(newServiceUri string) error {
 }
 
 // 将服务下线
-func (r DefaultRegistry) UnRegisterService(uri string) error {
+func (r DefaultRegistry) UnRegister(uri string, addr string) error {
 	cmd := codec.CmdReq{
 		ServiceUri: service.SERVICE_ADMIN,
 		Method:     service.METHOD_UNREGISTER,
-		Args:       []interface{}{uri},
+		Args:       []interface{}{uri, addr},
 	}
 	_, err := r.request(cmd)
 	return err
 }
 
 // 获取服务准备调用
-func (r DefaultRegistry) GetService(uri string) (addr string) {
+func (r DefaultRegistry) GetService(uri string) ([]string, error) {
 	cmd := codec.CmdReq{
 		ServiceUri: service.SERVICE_ADMIN,
 		Method:     service.METHOD_GET_SERVICE,
@@ -56,14 +59,24 @@ func (r DefaultRegistry) GetService(uri string) (addr string) {
 
 	resp, err := r.request(cmd)
 	if err != nil {
-		return ""
-	}
-	s, ok := resp.(string)
-	if !ok {
-		return ""
+		return nil, err
 	}
 
-	return s
+	rawAddrs, ok := resp.([]interface{})
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("default registry: %T assert []interface{} failed", resp))
+	}
+
+	addrs := make([]string, len(rawAddrs))
+	for i, rawAddr := range rawAddrs {
+		addr, ok := rawAddr.(string)
+		if !ok {
+			return nil, errors.New(fmt.Sprintf("default registry:  %q assert string failed", rawAddr))
+		}
+		addrs[i] = addr
+	}
+
+	return addrs, err
 }
 
 type RegisterResp struct {
